@@ -14,6 +14,7 @@
 
 """Encapsulate CephFS testing."""
 
+import logging
 from tenacity import Retrying, stop_after_attempt, wait_exponential
 
 import zaza.model as model
@@ -23,6 +24,7 @@ import zaza.openstack.charm_tests.nova.utils as nova_utils
 import zaza.openstack.charm_tests.test_utils as test_utils
 import zaza.openstack.configure.guest as guest
 import zaza.openstack.utilities.openstack as openstack_utils
+import zaza.openstack.utilities.generic as generic_utils
 
 
 class CephFSTests(test_utils.OpenStackBaseTest):
@@ -124,3 +126,27 @@ write_files:
 def _indent(text, amount, ch=' '):
     padding = amount * ch
     return ''.join(padding+line for line in text.splitlines(True))
+
+
+class CharmOperationTest(test_utils.BaseCharmTest):
+    """CephFS Charm operation tests."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Run class setup for CephFS charm operation tests."""
+        super(CharmOperationTest, cls).setUpClass()
+        cls.current_release = openstack_utils.get_os_release(
+            openstack_utils.get_current_os_release_pair(cls.application_name))
+
+    def test_pause_resume(self):
+        """Run pause and resume tests.
+
+        Pause service and check services are stopped, then resume and check
+        they are started.
+        """
+        hostnames = generic_utils.get_unit_hostnames(
+            model.get_unit_from_name(self.lead_unit))
+        services = ['ceph-mds@{}'.format(hostnames[self.lead_unit])]
+        with self.pause_resume(services):
+            logging.info('Testing pause resume (services="{}")'
+                         .format(services))
